@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System;
+using System.Threading;
 
 namespace QuickFix
 {
@@ -203,38 +205,40 @@ namespace QuickFix
                 WaitForLogout();
         }
 
-        /// <summary>
-        /// FIXME
-        /// </summary>
         private void WaitForLogout()
         {
-            System.Console.WriteLine("TODO - ThreadedSocketAcceptor.WaitForLogout not implemented!");
-            /*
-            int start = System.Environment.TickCount;
-            HashSet<Session> sessions = new HashSet<Session>(sessions_.Values);
-            while(sessions.Count > 0)
+            var watch = new Stopwatch();
+            watch.Start();
+            var loggedOnSessions = new List<Session>(sessions_.Values);
+            while(loggedOnSessions.Count > 0)
             {
                 Thread.Sleep(100);
-                
-                int elapsed = System.Environment.TickCount - start;
-                Iterator<Session> sessionItr = loggedOnSessions.iterator();
-                while (sessionItr.hasNext())
+
+                var toBeRemoved = new List<Session>();
+
+                var elapsed = watch.Elapsed;
+                foreach(var session in loggedOnSessions)
                 {
-                    Session session = sessionItr.next();
-                    if (elapsed >= session.getLogoutTimeout() * 1000L)
+                    if (elapsed >= TimeSpan.FromSeconds(session.LogoutTimeout))
                     {
-                        session.disconnect("Logout timeout, force disconnect", false);
-                        sessionItr.remove();
+                        session.Disconnect("Logout timeout, force disconnect");
+                        toBeRemoved.Add(session);
                     }
                 }
-                // Be sure we don't look forever
-                if (elapsed > 60000)
+
+                foreach (var session in toBeRemoved)
                 {
-                    log.warn("Stopping session logout wait after 1 minute");
+                    loggedOnSessions.Remove(session);
+                }
+
+                // Be sure we don't look forever
+                if (elapsed > TimeSpan.FromMinutes(1))
+                {
+                    Console.WriteLine("Stopping session logout wait after 1 minute");
+                    // log.warn("Stopping session logout wait after 1 minute");
                     break;
                 }
             }
-            */
         }
 
         #endregion
